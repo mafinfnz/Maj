@@ -43,8 +43,23 @@ def scrape():
         # Portland Legislation Base
         base_url = "https://forum.majestic-rp.ru/forums/zakonodatel-naya-baza.1338/"
         print(f"Visiting {base_url}...")
-        page.goto(base_url, wait_until="networkidle")
-        time.sleep(5)
+
+        # Increased timeout and wait for selector to bypass DDoS protection
+        page.goto(base_url, wait_until="load", timeout=60000)
+
+        print("Waiting for DDoS protection to pass...")
+        # Sometimes the page reloads or uses a challenge
+        try:
+            page.wait_for_selector("a[data-tp-primary='on']", timeout=30000)
+        except:
+            print("Selector not found. Moving mouse to simulate activity...")
+            page.mouse.move(100, 100)
+            time.sleep(5)
+            page.mouse.move(200, 200)
+            time.sleep(5)
+            if page.query_selector("text=Verify you are human"):
+                print("Manual verification might be needed on first run in headful mode.")
+            page.wait_for_load_state("networkidle")
 
         # Find all pages if pagination exists, but usually one page is enough for first look
         # Get all thread links
