@@ -4,9 +4,37 @@ import json
 import datetime
 import re
 
+import sys
+import subprocess
+
+def install_playwright():
+    print("Установка необходимых браузеров для Playwright...")
+    try:
+        subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], check=True)
+        return True
+    except Exception as e:
+        print(f"Ошибка при автоматической установке браузеров: {e}")
+        return False
+
 def scrape():
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        try:
+            browser = p.chromium.launch(headless=True)
+        except Exception as e:
+            if "Executable doesn't exist" in str(e) or "playwright install" in str(e).lower():
+                print("Браузер не найден.")
+                if install_playwright():
+                    try:
+                        browser = p.chromium.launch(headless=True)
+                    except Exception as e2:
+                        print(f"Не удалось запустить браузер даже после установки: {e2}")
+                        print("\nПОЖАЛУЙСТА, ВЫПОЛНИТЕ В КОНСОЛИ: playwright install chromium")
+                        return
+                else:
+                    print("\nПОЖАЛУЙСТА, ВЫПОЛНИТЕ В КОНСОЛИ: playwright install chromium")
+                    return
+            else:
+                raise e
         context = browser.new_context(
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
         )
