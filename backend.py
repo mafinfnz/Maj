@@ -73,7 +73,7 @@ def chat():
             response_text += "Проверьте соблюдение ПК, наличие видеофиксации и соответствие статьи составу преступления.\n"
     else:
         response_text = "Статьи не найдены."
-    response_text = re.sub(r'[^\x00-\x7Fа-яА-ЯёЁ\s\.,!?;:-]', '', response_text)
+    response_text = re.sub(r'[^\x00-\x7Fа-яА-ЯёЁ\s\.,!?;:•-]', '', response_text)
     return jsonify({"response": response_text})
 
 @app.errorhandler(404)

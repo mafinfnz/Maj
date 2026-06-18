@@ -6,9 +6,11 @@ const App = () => {
   const [isOpen, setIsOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('laws');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [laws, setLaws] = useState([]);
   const [filteredLaws, setFilteredLaws] = useState([]);
   const [selectedLaw, setSelectedLaw] = useState(null);
+  const [internalSearch, setInternalSearch] = useState('');
   const [lastUpdated, setLastUpdated] = useState('');
   const [chatMessages, setChatMessages] = useState([]);
   const [aiQuery, setAiQuery] = useState('');
@@ -57,17 +59,18 @@ const App = () => {
   }, []);
 
   useEffect(() => {
-    if (!searchQuery) {
-      setFilteredLaws(laws);
-      return;
+    let results = laws;
+    if (selectedCategory !== 'ALL') {
+      results = results.filter(law => law.category === selectedCategory);
     }
-    const results = laws.filter(law =>
-      law.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      law.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      law.content.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    if (searchQuery) {
+      results = results.filter(law =>
+        law.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        law.content.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
     setFilteredLaws(results);
-  }, [searchQuery, laws]);
+  }, [searchQuery, selectedCategory, laws]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -156,19 +159,19 @@ const App = () => {
                 </button>
                 <div className="flex bg-black/5 dark:bg-white/5 p-1 rounded-xl">
                   <button
-                    onClick={() => setActiveTab('laws')}
+                    onClick={() => { setActiveTab('laws'); setSelectedLaw(null); }}
                     className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'laws' ? 'bg-black/5 dark:bg-white/10 shadow-sm' : 'opacity-40 hover:opacity-70'}`}
                   >
                     <div className="flex items-center gap-2">
-                      <Book size={16} /> Laws
+                      <Book size={16} /> Законы
                     </div>
                   </button>
                   <button
-                    onClick={() => setActiveTab('ai')}
+                    onClick={() => { setActiveTab('ai'); setSelectedLaw(null); }}
                     className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'ai' ? 'bg-black/5 dark:bg-white/10 shadow-sm' : 'opacity-40 hover:opacity-70'}`}
                   >
                     <div className="flex items-center gap-2">
-                      <MessageSquare size={16} /> Legal AI
+                      <MessageSquare size={16} /> Юрист ИИ
                     </div>
                   </button>
                 </div>
@@ -182,7 +185,7 @@ const App = () => {
             </div>
 
             {/* Content Area */}
-            <div className="flex-1 overflow-hidden flex flex-col">
+            <div className="flex-1 overflow-hidden flex flex-col relative">
               <AnimatePresence mode="wait">
                 {activeTab === 'laws' ? (
                   <motion.div
@@ -192,64 +195,119 @@ const App = () => {
                     exit={{ opacity: 0 }}
                     className="flex-1 flex flex-col overflow-hidden"
                   >
-                    <div className="flex-1 overflow-hidden flex flex-col p-6">
-                      <div className="relative mb-6">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 opacity-30" size={18} />
-                        <input
-                          type="text"
-                          placeholder="Search for laws, articles, keywords..."
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                          className="w-full glass-input-wrapper rounded-2xl py-3 pl-12 pr-4 outline-none text-sm text-inherit placeholder:opacity-30"
-                        />
-                      </div>
-
-                      <div className="flex-1 overflow-y-auto pr-2 space-y-3">
-                        {filteredLaws.length > 0 ? (
-                          filteredLaws.map((law, idx) => (
-                            <motion.div
-                              key={idx}
-                              layoutId={`law-${idx}`}
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ delay: idx * 0.02 }}
-                              onClick={() => setSelectedLaw(law)}
-                              className="glass-card p-5 rounded-2xl cursor-pointer"
-                            >
-                              <div className="flex justify-between items-start mb-2">
-                                <h3 className="font-medium text-inherit">{law.title}</h3>
-                                <span className="text-[10px] bg-black/5 dark:bg-white/10 px-2 py-0.5 rounded-full opacity-50">{law.category}</span>
-                              </div>
-                              <p className="text-xs opacity-40 line-clamp-2">{law.content}</p>
-                            </motion.div>
-                          ))
-                        ) : (
-                          <div className="h-full flex flex-col items-center justify-center opacity-20">
-                            <Search size={48} className="mb-4" />
-                            <p>No results found</p>
+                    {selectedLaw ? (
+                       <motion.div
+                        initial={{ x: 50, opacity: 0 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        className="flex-1 flex flex-col overflow-hidden p-6"
+                       >
+                          <div className="flex items-center gap-4 mb-6">
+                            <button onClick={() => setSelectedLaw(null)} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors">
+                               <ChevronRight size={20} className="rotate-180" />
+                            </button>
+                            <div className="flex-1">
+                               <h2 className="text-xl font-semibold leading-tight">{selectedLaw.title}</h2>
+                               <p className="text-[10px] opacity-40 uppercase tracking-widest mt-1">{selectedLaw.category} • {selectedLaw.url}</p>
+                            </div>
                           </div>
-                        )}
-                      </div>
-                    </div>
 
-                    {/* Bottom Category Selector (Per User Request) */}
-                    <div className="px-6 py-4 border-t border-black/5 dark:border-white/10 bg-black/5 dark:bg-white/5 flex gap-2 overflow-x-auto scrollbar-hide">
-                      <button
-                         onClick={() => setSearchQuery('')}
-                         className={`px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${searchQuery === '' ? 'bg-black dark:bg-white text-white dark:text-black' : 'bg-black/5 dark:bg-white/5 opacity-60'}`}
-                      >
-                        ALL LAWS
-                      </button>
-                      {categories.map(cat => (
-                        <button
-                          key={cat}
-                          onClick={() => setSearchQuery(cat)}
-                          className={`px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${searchQuery === cat ? 'bg-black dark:bg-white text-white dark:text-black' : 'bg-black/5 dark:bg-white/5 opacity-60'}`}
-                        >
-                          {cat}
-                        </button>
-                      ))}
-                    </div>
+                          <div className="relative mb-4">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 opacity-30" size={16} />
+                            <input
+                              type="text"
+                              placeholder="Поиск внутри закона..."
+                              value={internalSearch}
+                              onChange={(e) => setInternalSearch(e.target.value)}
+                              className="w-full glass-input-wrapper rounded-xl py-2 pl-10 pr-4 outline-none text-sm text-inherit placeholder:opacity-30"
+                            />
+                          </div>
+
+                          <div className="flex-1 overflow-y-auto pr-2 text-sm leading-relaxed opacity-80 whitespace-pre-wrap">
+                            {selectedLaw.content.split('\n').map((line, i) => {
+                               if (internalSearch && line.toLowerCase().includes(internalSearch.toLowerCase())) {
+                                  const parts = line.split(new RegExp(`(${internalSearch})`, 'gi'));
+                                  return (
+                                    <div key={i}>
+                                      {parts.map((part, j) =>
+                                        part.toLowerCase() === internalSearch.toLowerCase()
+                                          ? <mark key={j} className="bg-yellow-500/40 text-inherit rounded-sm px-0.5">{part}</mark>
+                                          : part
+                                      )}
+                                    </div>
+                                  );
+                               }
+                               return <div key={i}>{line}</div>;
+                            })}
+                          </div>
+                       </motion.div>
+                    ) : (
+                      <>
+                        <div className="flex-1 overflow-hidden flex flex-col p-6">
+                          <div className="relative mb-6">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 opacity-30" size={18} />
+                            <input
+                              type="text"
+                              placeholder="Поиск по названию или содержанию..."
+                              value={searchQuery}
+                              onChange={(e) => setSearchQuery(e.target.value)}
+                              className="w-full glass-input-wrapper rounded-2xl py-3 pl-12 pr-4 outline-none text-sm text-inherit placeholder:opacity-30"
+                            />
+                          </div>
+
+                          <div className="flex-1 overflow-y-auto pr-2 space-y-3 scrollbar-custom">
+                            {filteredLaws.length > 0 ? (
+                              filteredLaws.map((law, idx) => (
+                                <motion.div
+                                  key={idx}
+                                  initial={{ opacity: 0, y: 10 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ delay: idx * 0.01 }}
+                                  onClick={() => { setSelectedLaw(law); setInternalSearch(''); }}
+                                  className="glass-card p-5 rounded-2xl cursor-pointer hover:border-white/20 transition-all group"
+                                >
+                                  <div className="flex justify-between items-start mb-2">
+                                    <h3 className="font-medium text-inherit group-hover:text-blue-400 transition-colors">{law.title}</h3>
+                                    <span className="text-[10px] bg-black/5 dark:bg-white/10 px-2 py-0.5 rounded-full opacity-50">{law.category}</span>
+                                  </div>
+                                  <p className="text-xs opacity-40 line-clamp-2">{law.content}</p>
+                                </motion.div>
+                              ))
+                            ) : (
+                              <div className="h-full flex flex-col items-center justify-center opacity-20">
+                                <Search size={48} className="mb-4" />
+                                <p>Ничего не найдено</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Bottom Category Selector */}
+                        <div className="px-6 py-4 border-t border-black/5 dark:border-white/10 bg-black/5 dark:bg-white/5 flex gap-2 overflow-x-auto scrollbar-hide">
+                          <button
+                            onClick={() => setSelectedCategory('ALL')}
+                            className={`px-4 py-2 rounded-full text-[10px] font-bold transition-all whitespace-nowrap ${selectedCategory === 'ALL' ? 'bg-white text-black' : 'bg-white/5 opacity-60 hover:opacity-100'}`}
+                          >
+                            ВСЕ
+                          </button>
+                          {categories.map(cat => (
+                            <button
+                              key={cat}
+                              onClick={() => {
+                                setSelectedCategory(cat);
+                                const law = laws.find(l => l.category === cat);
+                                if (law) {
+                                  setSelectedLaw(law);
+                                  setInternalSearch('');
+                                }
+                              }}
+                              className={`px-4 py-2 rounded-full text-[10px] font-bold transition-all whitespace-nowrap ${selectedCategory === cat ? 'bg-white text-black' : 'bg-white/5 opacity-60 hover:opacity-100'}`}
+                            >
+                              {cat}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </motion.div>
                 ) : (
                   <motion.div
@@ -257,9 +315,9 @@ const App = () => {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="flex-1 flex flex-col p-6"
+                    className="flex-1 flex flex-col overflow-hidden p-6"
                   >
-                    <div className="flex-1 overflow-y-auto pr-2 space-y-4 mb-4">
+                    <div className="flex-1 overflow-y-auto pr-2 space-y-4 mb-4 scrollbar-custom">
                       <div className="bg-black/5 dark:bg-white/5 rounded-2xl p-4 text-sm opacity-60 leading-relaxed max-w-[80%]">
                         Здравствуйте! Я ваш юридический помощник по законам Portland. Задавайте вопросы, например: "Как дефать 17.1 УК?"
                       </div>
@@ -287,21 +345,21 @@ const App = () => {
                       <div ref={chatEndRef} />
                     </div>
 
-                    <div className="relative group">
-                      <div className="glass-input-wrapper rounded-full p-2 pl-4 pr-3 flex items-center gap-3 shadow-lg">
-                        <Plus size={20} className="opacity-40 cursor-pointer hover:opacity-70 transition-colors" />
+                    <div className="relative mt-auto">
+                      <div className="glass-input-wrapper rounded-2xl p-2 pl-4 pr-3 flex items-center gap-3 shadow-lg border border-white/5">
+                        <Plus size={20} className="opacity-20 cursor-not-allowed" />
                         <input
                           type="text"
-                          placeholder="Спросите ChatGPT"
+                          placeholder="Задайте юридический вопрос..."
                           value={aiQuery}
                           onChange={(e) => setAiQuery(e.target.value)}
                           onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                          className="flex-1 bg-transparent border-none outline-none text-sm py-2 placeholder:opacity-20 text-inherit"
+                          className="flex-1 bg-transparent border-none outline-none text-sm py-3 placeholder:opacity-20 text-inherit"
                         />
                         <div className="flex items-center gap-3 pr-2">
-                           <Mic size={20} className="opacity-40 cursor-pointer hover:opacity-70 transition-colors" />
-                           <div className="w-8 h-8 rounded-full bg-black dark:bg-white flex items-center justify-center cursor-pointer hover:opacity-90 transition-all hover:scale-105 active:scale-95 shadow-md" onClick={handleSendMessage}>
-                             <AudioLines size={18} className="text-white dark:text-black" />
+                           <Mic size={20} className="opacity-20 cursor-not-allowed" />
+                           <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center cursor-pointer hover:opacity-90 transition-all active:scale-95 shadow-md" onClick={handleSendMessage}>
+                             <AudioLines size={20} className="text-black" />
                            </div>
                         </div>
                       </div>
@@ -377,35 +435,6 @@ const App = () => {
           </motion.div>
         )}
 
-        {selectedLaw && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-10"
-          >
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-md" onClick={() => setSelectedLaw(null)} />
-            <motion.div
-              initial={{ scale: 0.95, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 20 }}
-              className="liquid-glass w-full max-w-4xl max-h-[90vh] rounded-[2rem] overflow-hidden flex flex-col z-10 relative"
-            >
-              <div className="p-8 border-b border-black/5 dark:border-white/10 flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-semibold mb-1 text-inherit">{selectedLaw.title}</h2>
-                  <p className="text-xs opacity-40">{selectedLaw.category} • {selectedLaw.url}</p>
-                </div>
-                <button onClick={() => setSelectedLaw(null)} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full">
-                  <X size={24} />
-                </button>
-              </div>
-              <div className="p-8 overflow-y-auto flex-1 text-sm leading-relaxed opacity-80 whitespace-pre-wrap selection:bg-blue-500/30">
-                {selectedLaw.content}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
       </AnimatePresence>
     </div>
   );
