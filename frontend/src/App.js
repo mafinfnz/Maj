@@ -21,6 +21,7 @@ const App = () => {
   const [isRecordingKey, setIsRecordingKey] = useState(false);
 
   const chatEndRef = useRef(null);
+  const ipcRenderer = window.require ? window.require('electron').ipcRenderer : null;
 
   // Keyboard Hotkey Listener
   useEffect(() => {
@@ -30,6 +31,9 @@ const App = () => {
         const key = event.key;
         setToggleKey(key);
         localStorage.setItem('overlay_hotkey', key);
+        if (ipcRenderer) {
+          ipcRenderer.send('update-hotkey', key);
+        }
         setIsRecordingKey(false);
         return;
       }
@@ -48,6 +52,11 @@ const App = () => {
   }, [isOpen, toggleKey, isRecordingKey, showSettings, selectedLaw]);
 
   useEffect(() => {
+    // Initial hotkey sync for Electron
+    if (ipcRenderer && toggleKey) {
+      ipcRenderer.send('update-hotkey', toggleKey);
+    }
+
     fetch('http://localhost:5000/api/laws')
       .then(res => res.json())
       .then(data => {
@@ -64,10 +73,20 @@ const App = () => {
       results = results.filter(law => law.category === selectedCategory);
     }
     if (searchQuery) {
+      const q = searchQuery.toLowerCase();
       results = results.filter(law =>
-        law.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        law.content.toLowerCase().includes(searchQuery.toLowerCase())
+        law.title.toLowerCase().includes(q) ||
+        law.content.toLowerCase().includes(q)
       );
+
+      // Prioritize laws that contain the exact "Article [q]" or just "[q]" at the start of a line
+      results.sort((a, b) => {
+        const aHasExact = a.content.toLowerCase().includes(`статья ${q}`) || a.content.toLowerCase().includes(`${q}. `);
+        const bHasExact = b.content.toLowerCase().includes(`статья ${q}`) || b.content.toLowerCase().includes(`${q}. `);
+        if (aHasExact && !bHasExact) return -1;
+        if (!aHasExact && bHasExact) return 1;
+        return 0;
+      });
     }
     setFilteredLaws(results);
   }, [searchQuery, selectedCategory, laws]);
@@ -102,7 +121,7 @@ const App = () => {
   const categories = ['УК', 'ПК', 'ДК', 'АК', 'Конституция', 'ЭК', 'ТК'];
 
   return (
-    <div className={`${isDarkMode ? 'dark' : ''} h-screen w-screen flex items-center justify-center font-sans p-10 transition-colors duration-500`}>
+    <div className={`${isDarkMode ? 'dark' : ''} h-screen w-screen flex items-center justify-center p-10 transition-colors duration-500`}>
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -294,7 +313,10 @@ const App = () => {
                               key={cat}
                               onClick={() => {
                                 setSelectedCategory(cat);
-                                const law = laws.find(l => l.category === cat);
+                                const law = laws.find(l =>
+                                  l.category === cat ||
+                                  l.title.toLowerCase().startsWith(cat.toLowerCase())
+                                );
                                 if (law) {
                                   setSelectedLaw(law);
                                   setInternalSearch('');

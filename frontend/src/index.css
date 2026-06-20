@@ -3,30 +3,37 @@
 @tailwind utilities;
 
 :root {
-  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-bg: rgba(255, 255, 255, 0.8);
   --glass-border: rgba(0, 0, 0, 0.1);
   --glass-blur: 25px;
   --text-color: #1d1d1f;
   --bg-color: #f5f5f7;
+  --card-bg: rgba(0, 0, 0, 0.03);
 }
 
 .dark {
-  --glass-bg: rgba(0, 0, 0, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.05);
+  --glass-bg: rgba(18, 18, 18, 0.95);
+  --glass-border: rgba(255, 255, 255, 0.15);
   --text-color: #ffffff;
   --bg-color: #000000;
+  --card-bg: rgba(255, 255, 255, 0.08);
 }
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+  font-family: "SF Pro Display", "SF Pro", -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--bg-color);
   color: var(--text-color);
-  transition: background-color 0.5s ease;
+  transition: background-color 0.3s ease;
   height: 100vh;
   overflow: hidden;
+}
+
+h1, h2, h3 {
+  font-weight: 900 !important;
+  letter-spacing: -0.02em;
 }
 
 /* Apple Liquid Glass Effect */
@@ -35,49 +42,51 @@ body {
   backdrop-filter: blur(var(--glass-blur)) saturate(180%);
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%);
   border: 1px solid var(--glass-border);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
 }
 
 .glass-card {
-  background: rgba(0, 0, 0, 0.03);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  background: var(--card-bg);
+  border: 1px solid var(--glass-border);
+  transition: all 0.3s ease;
 }
 
-.dark .glass-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+.dark .glass-card:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
 .glass-input-wrapper {
   background: rgba(0, 0, 0, 0.05);
   border: 1px solid rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(10px);
 }
 
 .dark .glass-input-wrapper {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-/* Custom Scrollbar */
+/* Scrollbar */
 .scrollbar-custom::-webkit-scrollbar {
-  width: 4px;
-}
-.scrollbar-custom::-webkit-scrollbar-track {
-  background: transparent;
+  width: 6px;
 }
 .scrollbar-custom::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.2);
   border-radius: 10px;
 }
 .dark .scrollbar-custom::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.4);
 }
 
+/* High contrast for dark mode */
+.dark .opacity-40 { opacity: 0.7 !important; }
+.dark .opacity-50 { opacity: 0.8 !important; }
+.dark .opacity-30 { opacity: 0.6 !important; }
+.dark .opacity-20 { opacity: 0.5 !important; }
+
 mark {
-  background: rgba(59, 130, 246, 0.3);
-  color: inherit;
-  border-radius: 2px;
+  background: #0071e3;
+  color: white;
   padding: 0 2px;
+  border-radius: 2px;
 }

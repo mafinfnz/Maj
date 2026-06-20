@@ -11,8 +11,15 @@ CORS(app)
 morph = pymorphy3.MorphAnalyzer()
 
 def tokenize(text):
-    words = re.findall(r'\w+', text.lower())
-    return [morph.parse(w)[0].normal_form for w in words]
+    # Preserving dots in numbers (e.g., 17.1) for better legal search
+    words = re.findall(r'\w+(?:\.\w+)*', text.lower())
+    tokens = []
+    for w in words:
+        if re.match(r'^\d+(\.\d+)*$', w):
+            tokens.append(w) # Keep numbers as is
+        else:
+            tokens.append(morph.parse(w)[0].normal_form)
+    return tokens
 
 # Load laws
 try:
@@ -27,7 +34,8 @@ except Exception as e:
 
 corpus = []
 for law in laws:
-    text = f"{law['title']} {law['content']}"
+    # Adding title multiple times to boost its weight
+    text = f"{law['title']} {law['title']} {law['content']}"
     corpus.append(tokenize(text))
 
 bm25 = BM25Okapi(corpus) if corpus else None
@@ -54,8 +62,11 @@ def chat():
         return jsonify({"response": "Пожалуйста, введите ваш вопрос."})
     if not bm25:
         return jsonify({"response": "База данных законов пуста."})
+
     tokenized_query = tokenize(user_query)
+    # Perform search
     top_n = bm25.get_top_n(tokenized_query, laws, n=3)
+
     response_text = "--- АНАЛИЗ ЗАКОНОДАТЕЛЬСТВА PORTLAND ---\n\n"
     if top_n:
         response_text += "Найденные основания:\n"
@@ -66,13 +77,19 @@ def chat():
             snippet = " ".join(relevant_sentences[:2]) if relevant_sentences else doc['content'][:300]
             if len(snippet) > 300: snippet = snippet[:300] + "..."
             response_text += f"  Цитата: {snippet}\n\n"
+
         response_text += "--- СТРАТЕГИЯ ЗАЩИТЫ ---\n"
-        if "17.1" in user_query or "семнадцать один" in user_query.lower():
-            response_text += "Для защиты по 17.1 УК рекомендуется: Оспорить умысел, проверить стадии силы и процедуру задержания.\n"
+        # Check for specific articles in query
+        if any(art in user_query for art in ["17.1", "17.1 УК"]):
+            response_text += "Защита по 17.1 УК: Упирайте на отсутствие прямого умысла и нарушение стадий применения силы гос. служащим.\n"
+        elif any(art in user_query for art in ["15.1", "15.1 УК"]):
+            response_text += "Защита по 15.1 УК: Проверьте наличие видеофиксации нарушения и законность требования.\n"
         else:
-            response_text += "Проверьте соблюдение ПК, наличие видеофиксации и соответствие статьи составу преступления.\n"
+            response_text += "Проверьте соблюдение Процессуального Кодекса, наличие видеофиксации и соответствие статьи составу преступления.\n"
     else:
         response_text = "Статьи не найдены."
+
+    # Strip emojis but keep bullet points
     response_text = re.sub(r'[^\x00-\x7Fа-яА-ЯёЁ\s\.,!?;:•-]', '', response_text)
     return jsonify({"response": response_text})
 
