@@ -55,6 +55,10 @@ app.on('ready', () => {
   registerShortcut(currentHotkey);
 
   ipcMain.on('update-hotkey', (event, newKey) => {
+    // Electron expects modifiers like 'CommandOrControl', 'Alt', 'Shift'
+    // Our frontend sends 'Control', 'Alt', 'Shift', 'Command'
+    // 'Control' is accepted by Electron, but 'CommandOrControl' is better for cross-platform.
+    // However, the user specifically wants these combinations.
     console.log(`Updating global hotkey to: ${newKey}`);
     registerShortcut(newKey);
   });

@@ -23,22 +23,70 @@ const App = () => {
   const chatEndRef = useRef(null);
   const ipcRenderer = window.require ? window.require('electron').ipcRenderer : null;
 
+  // Helper to format hotkey string from KeyboardEvent
+  const getHotkeyString = (event) => {
+    const modifiers = [];
+    if (event.ctrlKey) modifiers.push('Control');
+    if (event.altKey) modifiers.push('Alt');
+    if (event.shiftKey) modifiers.push('Shift');
+    if (event.metaKey) modifiers.push('Command');
+
+    let key = event.code;
+
+    // Ignore if only a modifier is pressed
+    if (['ControlLeft', 'ControlRight', 'ShiftLeft', 'ShiftRight', 'AltLeft', 'AltRight', 'MetaLeft', 'MetaRight'].includes(key)) {
+      return null;
+    }
+
+    // Normalize KeyE -> E, Digit1 -> 1
+    if (key.startsWith('Key')) key = key.slice(3);
+    if (key.startsWith('Digit')) key = key.slice(5);
+
+    // Electron-friendly names for some keys
+    const mapping = {
+      'ArrowUp': 'Up', 'ArrowDown': 'Down', 'ArrowLeft': 'Left', 'ArrowRight': 'Right',
+      'Escape': 'Esc', 'Insert': 'Ins', 'Delete': 'Del', 'PageUp': 'PageUp', 'PageDown': 'PageDown',
+      'Home': 'Home', 'End': 'End', 'Space': 'Space', 'Enter': 'Enter', 'Tab': 'Tab',
+      'Backspace': 'Backspace', 'Capslock': 'Capslock', 'NumLock': 'NumLock', 'ScrollLock': 'ScrollLock',
+      'Pause': 'Pause', 'PrintScreen': 'PrintScreen', 'Numpad0': 'num0', 'Numpad1': 'num1',
+      'Numpad2': 'num2', 'Numpad3': 'num3', 'Numpad4': 'num4', 'Numpad5': 'num5',
+      'Numpad6': 'num6', 'Numpad7': 'num7', 'Numpad8': 'num8', 'Numpad9': 'num9',
+      'NumpadAdd': 'plus', 'NumpadSubtract': 'minus', 'NumpadMultiply': '*', 'NumpadDivide': '/'
+    };
+
+    if (mapping[key]) key = mapping[key];
+
+    // Build combination
+    if (modifiers.length > 0) {
+      // Remove the key from modifiers if it's already there (though handled by ignore list above)
+      const filteredModifiers = modifiers.filter(m => m.toLowerCase() !== key.toLowerCase());
+      return [...filteredModifiers, key].join('+');
+    }
+
+    return key;
+  };
+
   // Keyboard Hotkey Listener
   useEffect(() => {
     const handleKeyDown = (event) => {
       if (isRecordingKey) {
         event.preventDefault();
-        const key = event.key;
-        setToggleKey(key);
-        localStorage.setItem('overlay_hotkey', key);
-        if (ipcRenderer) {
-          ipcRenderer.send('update-hotkey', key);
+        const hotkey = getHotkeyString(event);
+
+        if (hotkey) {
+          setToggleKey(hotkey);
+          localStorage.setItem('overlay_hotkey', hotkey);
+          if (ipcRenderer) {
+            ipcRenderer.send('update-hotkey', hotkey);
+          }
+          setIsRecordingKey(false);
         }
-        setIsRecordingKey(false);
         return;
       }
 
-      if (event.key === toggleKey) {
+      // Robust check for toggleKey (works for combinations)
+      const pressedHotkey = getHotkeyString(event);
+      if (pressedHotkey === toggleKey) {
         setIsOpen(prev => !prev);
       }
       if (event.key === 'Escape' && isOpen) {
