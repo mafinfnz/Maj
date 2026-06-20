@@ -15,13 +15,48 @@ const App = () => {
   const [chatMessages, setChatMessages] = useState([]);
   const [aiQuery, setAiQuery] = useState('');
   const [isDarkMode, setIsDarkMode] = useState(true);
+  const [isListening, setIsListening] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [toggleKey, setToggleKey] = useState(localStorage.getItem('overlay_hotkey') || 'F9');
   const [showSettings, setShowSettings] = useState(false);
   const [isRecordingKey, setIsRecordingKey] = useState(false);
 
   const chatEndRef = useRef(null);
+  const recognitionRef = useRef(null);
   const ipcRenderer = window.require ? window.require('electron').ipcRenderer : null;
+
+  // Speech Recognition Setup
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'ru-RU';
+
+      recognition.onstart = () => setIsListening(true);
+      recognition.onend = () => setIsListening(false);
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        setAiQuery(prev => (prev ? `${prev} ${transcript}` : transcript));
+      };
+      recognition.onerror = (event) => {
+        console.error('Speech recognition error', event.error);
+        setIsListening(false);
+      };
+      recognition.onnomatch = () => setIsListening(false);
+
+      recognitionRef.current = recognition;
+    }
+  }, []);
+
+  const toggleListening = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+    } else {
+      recognitionRef.current?.start();
+    }
+  };
 
   // Helper to format hotkey string from KeyboardEvent
   const getHotkeyString = (event) => {
@@ -203,31 +238,31 @@ const App = () => {
             className="liquid-glass w-full max-w-5xl h-[80vh] rounded-[2rem] overflow-hidden flex flex-col z-10 shadow-2xl"
           >
             {/* Header */}
-            <div className="p-6 flex items-center justify-between border-b border-black/5 dark:border-white/10">
+            <div className="p-6 flex items-center justify-between border-b border-black/10 dark:border-white/10 transition-colors duration-500">
               <div>
-                <h1 className="text-2xl font-semibold tracking-tight text-inherit">Majestic Laws</h1>
-                <p className="text-xs opacity-50 mt-1 flex items-center gap-1">
+                <h1 className="text-2xl font-semibold tracking-tight text-inherit">Законы Majestic</h1>
+                <p className="text-xs opacity-60 mt-1 flex items-center gap-1 transition-opacity duration-500">
                   <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-                  Last updated: {lastUpdated}
+                  Последнее обновление: {lastUpdated}
                 </p>
               </div>
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setShowSettings(true)}
-                  className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors text-inherit"
+                  className="p-2 hover:bg-black/10 dark:hover:bg-white/20 rounded-full transition-colors text-inherit"
                 >
                   <Settings size={20} />
                 </button>
                 <button
                   onClick={() => setIsDarkMode(!isDarkMode)}
-                  className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors text-inherit"
+                  className="p-2 hover:bg-black/10 dark:hover:bg-white/20 rounded-full transition-colors text-inherit"
                 >
                   {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
                 </button>
-                <div className="flex bg-black/5 dark:bg-white/5 p-1 rounded-xl">
+                <div className="flex bg-black/10 dark:bg-white/10 p-1 rounded-xl transition-colors duration-500">
                   <button
                     onClick={() => { setActiveTab('laws'); setSelectedLaw(null); }}
-                    className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'laws' ? 'bg-black/5 dark:bg-white/10 shadow-sm' : 'opacity-40 hover:opacity-70'}`}
+                    className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'laws' ? 'bg-black/10 dark:bg-white/20 shadow-sm' : 'opacity-50 hover:opacity-80'}`}
                   >
                     <div className="flex items-center gap-2">
                       <Book size={16} /> Законы
@@ -235,7 +270,7 @@ const App = () => {
                   </button>
                   <button
                     onClick={() => { setActiveTab('ai'); setSelectedLaw(null); }}
-                    className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'ai' ? 'bg-black/5 dark:bg-white/10 shadow-sm' : 'opacity-40 hover:opacity-70'}`}
+                    className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'ai' ? 'bg-black/10 dark:bg-white/20 shadow-sm' : 'opacity-50 hover:opacity-80'}`}
                   >
                     <div className="flex items-center gap-2">
                       <MessageSquare size={16} /> Юрист ИИ
@@ -244,7 +279,7 @@ const App = () => {
                 </div>
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors"
+                  className="p-2 hover:bg-black/10 dark:hover:bg-white/20 rounded-full transition-colors"
                 >
                   <X size={20} />
                 </button>
@@ -252,7 +287,7 @@ const App = () => {
             </div>
 
             {/* Content Area */}
-            <div className="flex-1 overflow-hidden flex flex-col relative">
+            <div className="flex-1 overflow-hidden flex flex-col relative transition-colors duration-500">
               <AnimatePresence mode="wait">
                 {activeTab === 'laws' ? (
                   <motion.div
@@ -273,19 +308,19 @@ const App = () => {
                                <ChevronRight size={20} className="rotate-180" />
                             </button>
                             <div className="flex-1">
-                               <h2 className="text-xl font-semibold leading-tight">{selectedLaw.title}</h2>
-                               <p className="text-[10px] opacity-40 uppercase tracking-widest mt-1">{selectedLaw.category} • {selectedLaw.url}</p>
+                               <h2 className="text-xl font-semibold leading-tight text-inherit">{selectedLaw.title}</h2>
+                               <p className="text-[10px] opacity-60 dark:opacity-60 uppercase tracking-widest mt-1 text-inherit">{selectedLaw.category} • {selectedLaw.url}</p>
                             </div>
                           </div>
 
                           <div className="relative mb-4">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 opacity-30" size={16} />
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 opacity-50" size={16} />
                             <input
                               type="text"
                               placeholder="Поиск внутри закона..."
                               value={internalSearch}
                               onChange={(e) => setInternalSearch(e.target.value)}
-                              className="w-full glass-input-wrapper rounded-xl py-2 pl-10 pr-4 outline-none text-sm text-inherit placeholder:opacity-30"
+                              className="w-full glass-input-wrapper rounded-xl py-2 pl-10 pr-4 outline-none text-sm text-inherit placeholder:opacity-50"
                             />
                           </div>
 
@@ -311,13 +346,13 @@ const App = () => {
                       <>
                         <div className="flex-1 overflow-hidden flex flex-col p-6">
                           <div className="relative mb-6">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 opacity-30" size={18} />
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 opacity-50" size={18} />
                             <input
                               type="text"
                               placeholder="Поиск по названию или содержанию..."
                               value={searchQuery}
                               onChange={(e) => setSearchQuery(e.target.value)}
-                              className="w-full glass-input-wrapper rounded-2xl py-3 pl-12 pr-4 outline-none text-sm text-inherit placeholder:opacity-30"
+                              className="w-full glass-input-wrapper rounded-2xl py-3 pl-12 pr-4 outline-none text-sm text-inherit placeholder:opacity-50"
                             />
                           </div>
 
@@ -333,10 +368,10 @@ const App = () => {
                                   className="glass-card p-5 rounded-2xl cursor-pointer hover:border-white/20 transition-all group"
                                 >
                                   <div className="flex justify-between items-start mb-2">
-                                    <h3 className="font-medium text-inherit group-hover:text-blue-400 transition-colors">{law.title}</h3>
-                                    <span className="text-[10px] bg-black/5 dark:bg-white/10 px-2 py-0.5 rounded-full opacity-50">{law.category}</span>
+                                    <h3 className="font-medium text-inherit group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{law.title}</h3>
+                                    <span className="text-[10px] bg-black/10 dark:bg-white/10 px-2 py-0.5 rounded-full opacity-70 transition-opacity duration-500">{law.category}</span>
                                   </div>
-                                  <p className="text-xs opacity-40 line-clamp-2">{law.content}</p>
+                                  <p className="text-xs opacity-70 dark:opacity-60 line-clamp-2 transition-opacity duration-500">{law.content}</p>
                                 </motion.div>
                               ))
                             ) : (
@@ -349,10 +384,10 @@ const App = () => {
                         </div>
 
                         {/* Bottom Category Selector */}
-                        <div className="px-6 py-4 border-t border-black/5 dark:border-white/10 bg-black/5 dark:bg-white/5 flex gap-2 overflow-x-auto scrollbar-hide">
+                        <div className="px-6 py-4 border-t border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 flex gap-2 overflow-x-auto scrollbar-hide transition-colors duration-500">
                           <button
                             onClick={() => setSelectedCategory('ALL')}
-                            className={`px-4 py-2 rounded-full text-[10px] font-bold transition-all whitespace-nowrap ${selectedCategory === 'ALL' ? 'bg-white text-black' : 'bg-white/5 opacity-60 hover:opacity-100'}`}
+                            className={`px-4 py-2 rounded-full text-[10px] font-bold transition-all whitespace-nowrap ${selectedCategory === 'ALL' ? 'bg-black dark:bg-white text-white dark:text-black shadow-lg' : 'bg-black/10 dark:bg-white/10 opacity-70 hover:opacity-100'}`}
                           >
                             ВСЕ
                           </button>
@@ -370,7 +405,7 @@ const App = () => {
                                   setInternalSearch('');
                                 }
                               }}
-                              className={`px-4 py-2 rounded-full text-[10px] font-bold transition-all whitespace-nowrap ${selectedCategory === cat ? 'bg-white text-black' : 'bg-white/5 opacity-60 hover:opacity-100'}`}
+                              className={`px-4 py-2 rounded-full text-[10px] font-bold transition-all whitespace-nowrap ${selectedCategory === cat ? 'bg-black dark:bg-white text-white dark:text-black shadow-lg' : 'bg-black/10 dark:bg-white/10 opacity-70 hover:opacity-100'}`}
                             >
                               {cat}
                             </button>
@@ -388,7 +423,7 @@ const App = () => {
                     className="flex-1 flex flex-col overflow-hidden p-6"
                   >
                     <div className="flex-1 overflow-y-auto pr-2 space-y-4 mb-4 scrollbar-custom">
-                      <div className="bg-black/5 dark:bg-white/5 rounded-2xl p-4 text-sm opacity-60 leading-relaxed max-w-[80%]">
+                      <div className="bg-black/10 dark:bg-white/10 rounded-2xl p-4 text-sm opacity-80 dark:opacity-70 leading-relaxed max-w-[80%] transition-opacity duration-500">
                         Здравствуйте! Я ваш юридический помощник по законам Portland. Задавайте вопросы, например: "Как дефать 17.1 УК?"
                       </div>
                       {chatMessages.map((msg, i) => (
@@ -396,10 +431,10 @@ const App = () => {
                           key={i}
                           className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                         >
-                          <div className={`max-w-[80%] p-4 rounded-2xl text-sm leading-relaxed ${
-                            msg.role === 'user' ? 'bg-blue-600/30 border border-blue-500/30' : 'bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 shadow-sm'
+                          <div className={`max-w-[80%] p-4 rounded-2xl text-sm leading-relaxed transition-all duration-500 ${
+                            msg.role === 'user' ? 'bg-blue-500/20 dark:bg-blue-600/30 border border-blue-500/30' : 'bg-black/10 dark:bg-white/10 border border-black/10 dark:border-white/20 shadow-sm'
                           }`}>
-                            <pre className="whitespace-pre-wrap font-sans">{msg.content}</pre>
+                            <pre className="whitespace-pre-wrap font-sans text-inherit">{msg.content}</pre>
                           </div>
                         </div>
                       ))}
@@ -416,20 +451,24 @@ const App = () => {
                     </div>
 
                     <div className="relative mt-auto">
-                      <div className="glass-input-wrapper rounded-2xl p-2 pl-4 pr-3 flex items-center gap-3 shadow-lg border border-white/5">
-                        <Plus size={20} className="opacity-20 cursor-not-allowed" />
+                      <div className="glass-input-wrapper rounded-2xl p-2 pl-6 pr-3 flex items-center gap-3 shadow-lg border border-white/5 transition-all duration-300">
                         <input
                           type="text"
                           placeholder="Задайте юридический вопрос..."
                           value={aiQuery}
                           onChange={(e) => setAiQuery(e.target.value)}
                           onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                          className="flex-1 bg-transparent border-none outline-none text-sm py-3 placeholder:opacity-20 text-inherit"
+                          className="flex-1 bg-transparent border-none outline-none text-sm py-3 placeholder:opacity-50 text-inherit"
                         />
                         <div className="flex items-center gap-3 pr-2">
-                           <Mic size={20} className="opacity-20 cursor-not-allowed" />
-                           <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center cursor-pointer hover:opacity-90 transition-all active:scale-95 shadow-md" onClick={handleSendMessage}>
-                             <AudioLines size={20} className="text-black" />
+                           <button
+                             onClick={toggleListening}
+                             className={`p-2 rounded-full transition-all duration-300 ${isListening ? 'bg-red-500 text-white animate-pulse shadow-lg scale-110' : 'opacity-40 hover:opacity-100 dark:opacity-60 dark:hover:opacity-100 text-inherit'}`}
+                           >
+                             <Mic size={20} />
+                           </button>
+                           <div className="w-10 h-10 rounded-xl bg-black dark:bg-white flex items-center justify-center cursor-pointer hover:opacity-90 transition-all active:scale-95 shadow-md" onClick={handleSendMessage}>
+                             <AudioLines size={20} className="text-white dark:text-black rotate-90" />
                            </div>
                         </div>
                       </div>
@@ -440,14 +479,14 @@ const App = () => {
             </div>
 
             {/* Bottom Controls / Status */}
-            <div className="px-6 py-4 border-t border-black/5 dark:border-white/10 flex items-center justify-between text-[10px] opacity-30 uppercase tracking-widest font-bold">
+            <div className="px-6 py-4 border-t border-black/10 dark:border-white/10 flex items-center justify-between text-[10px] opacity-80 dark:opacity-80 uppercase tracking-widest font-bold transition-colors duration-500">
               <div className="flex gap-6">
-                <span>ESC - Close</span>
-                <button onClick={() => setShowSettings(true)} className="hover:opacity-100 transition-opacity uppercase">{toggleKey} - Toggle Overlay</button>
+                <span>ESC - Закрыть</span>
+                <button onClick={() => setShowSettings(true)} className="hover:opacity-100 transition-opacity uppercase">{toggleKey} - Переключить оверлей</button>
               </div>
               <div className="flex items-center gap-2">
                 <Settings size={12} />
-                <span>Portland Official Data</span>
+                <span>Официальные данные Portland</span>
               </div>
             </div>
           </motion.div>
@@ -469,33 +508,33 @@ const App = () => {
               exit={{ scale: 0.95, y: 20 }}
               className="liquid-glass w-full max-w-md rounded-[2rem] overflow-hidden flex flex-col z-10 relative"
             >
-              <div className="p-8 border-b border-black/5 dark:border-white/10 flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-inherit">Settings</h2>
-                <button onClick={() => setShowSettings(false)} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full">
+              <div className="p-8 border-b border-black/10 dark:border-white/10 flex items-center justify-between transition-colors duration-500">
+                <h2 className="text-xl font-semibold text-inherit">Настройки</h2>
+                <button onClick={() => setShowSettings(false)} className="p-2 hover:bg-black/10 dark:hover:bg-white/20 rounded-full">
                   <X size={20} />
                 </button>
               </div>
               <div className="p-8 space-y-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium">Overlay Hotkey</p>
-                    <p className="text-xs opacity-40">Key to open/close the laws</p>
+                    <p className="text-sm font-medium">Клавиша оверлея</p>
+                    <p className="text-xs opacity-60 transition-opacity duration-500">Клавиша для открытия/закрытия законов</p>
                   </div>
                   <button
                     onClick={() => setIsRecordingKey(true)}
-                    className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${isRecordingKey ? 'bg-red-500 text-white animate-pulse' : 'bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20'}`}
+                    className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${isRecordingKey ? 'bg-red-500 text-white animate-pulse' : 'bg-black/10 dark:bg-white/20 hover:bg-black/20 dark:hover:bg-white/30'}`}
                   >
-                    {isRecordingKey ? 'Press any key...' : toggleKey}
+                    {isRecordingKey ? 'Нажмите любую клавишу...' : toggleKey}
                   </button>
                 </div>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium">Interface Theme</p>
-                    <p className="text-xs opacity-40">Switch between light and dark</p>
+                    <p className="text-sm font-medium">Тема интерфейса</p>
+                    <p className="text-xs opacity-60 transition-opacity duration-500">Переключение между светлой и темной темой</p>
                   </div>
                   <button
                     onClick={() => setIsDarkMode(!isDarkMode)}
-                    className="p-2 bg-black/5 dark:bg-white/10 rounded-xl"
+                    className="p-2 bg-black/10 dark:bg-white/10 rounded-xl transition-colors duration-500"
                   >
                     {isDarkMode ? <Moon size={18} /> : <Sun size={18} />}
                   </button>
